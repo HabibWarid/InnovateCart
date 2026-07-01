@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Product } from "../types";
 import { motion } from "motion/react";
-import { Cpu, HelpCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { Cpu, HelpCircle } from "lucide-react";
 
 interface ProductSectionProps {
   onAddToCart: (product: Product) => void;
@@ -24,12 +24,13 @@ export default function ProductSection({
     fetch("/api/products")
       .then((res) => res.json())
       .then((data) => {
-        if (data.products) {
-          setProducts(data.products);
-          // Auto-select first product
-          if (data.products.length > 0 && !selectedProductId) {
-            onSelectProduct(data.products[0]);
-          }
+        // ডাটা অবজেক্ট হোক কিংবা ডিরেক্ট অ্যারে হোক—দুইটাই হ্যান্ডেল করবে
+        const productsList = Array.isArray(data) ? data : (data.products || []);
+        
+        setProducts(productsList);
+        // Auto-select first product
+        if (productsList.length > 0 && !selectedProductId) {
+          onSelectProduct(productsList[0]);
         }
         setLoading(false);
       })
@@ -116,7 +117,6 @@ export default function ProductSection({
                 <div
                   className={`w-full h-36 bg-gradient-to-br ${product.imageBg} border border-white/5 flex items-center justify-center relative overflow-hidden mb-6 group-hover:scale-[1.02] transition-all duration-300`}
                 >
-                  {/* Visual grid overlay */}
                   <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_white_1px,_transparent_1px)] bg-[size:15px_15px]"></div>
                   <div className="w-16 h-16 border border-white/10 rounded-full flex items-center justify-center">
                     <Cpu className="h-6 w-6 text-white/25" />

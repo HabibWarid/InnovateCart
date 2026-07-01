@@ -13,8 +13,7 @@ interface CheckoutModalProps {
 export default function CheckoutModal({
   isOpen,
   onClose,
-  cart,
-  onClearCart,
+  cart = [], // ফিক্স ১: কার্ট যদি কোনো কারণে undefined আসে, তবে ডিফল্ট খালি অ্যারে সেট হবে
 }: CheckoutModalProps) {
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -27,13 +26,14 @@ export default function CheckoutModal({
   const [successOrder, setSuccessOrder] = useState<any | null>(null);
   const [sandboxInfo, setSandboxInfo] = useState<string | null>(null);
 
-  const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  // ফিক্স ২: সেফটি চেক অ্যাড করা হয়েছে যাতে রিডিউস কখনো ক্র্যাশ না করে
+  const safeCart = Array.isArray(cart) ? cart : [];
+  const subtotal = safeCart.reduce((sum, item) => sum + (item.product?.price || 0) * (item.quantity || 0), 0);
   const tax = subtotal * 0.08; // 8% tax
   const shipping = subtotal > 500 ? 0 : 25; // free express over $500
   const total = subtotal + tax + shipping;
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Format card input with spaces
     let v = e.target.value.replace(/\D/g, "");
     if (v.length > 16) v = v.substring(0, 16);
     let parts = [];
@@ -71,13 +71,12 @@ export default function CheckoutModal({
     setSandboxInfo(null);
 
     try {
-      // 1. Create Payment Intent
       const piResponse = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: total,
-          metadata: { name, email, item_count: cart.length.toString() }
+          metadata: { name, email, item_count: safeCart.length.toString() }
         })
       });
 
@@ -91,8 +90,7 @@ export default function CheckoutModal({
         setSandboxInfo("Stripe Developer Mode: Sandbox transaction simulated successfully.");
       }
 
-      // 2. Complete order insertion on success
-      const orderItems = cart.map((item) => ({
+      const orderItems = safeCart.map((item) => ({
         productId: item.product.id,
         name: item.product.name,
         price: item.product.price,
@@ -119,7 +117,6 @@ export default function CheckoutModal({
       const orderData = await orderResponse.json();
 
       if (orderData.success) {
-        // Stagger complete screen for premium hardware checkout feel
         setTimeout(() => {
           setSuccessOrder(orderData.order);
           setIsProcessing(false);
@@ -145,7 +142,6 @@ export default function CheckoutModal({
           exit={{ opacity: 0, scale: 0.95 }}
           className="w-full max-w-4xl bg-[#0a0a0a] border border-white/10 text-white flex flex-col md:flex-row relative"
         >
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10"
@@ -155,7 +151,6 @@ export default function CheckoutModal({
 
           {!successOrder ? (
             <>
-              {/* Left Column: Order Summary (Matte Black) */}
               <div className="w-full md:w-1/2 p-8 md:p-12 border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-between">
                 <div>
                   <div className="uppercase text-[10px] font-black tracking-[0.2em] text-white/40 mb-8">
@@ -163,16 +158,16 @@ export default function CheckoutModal({
                   </div>
 
                   <div className="space-y-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {cart.map((item) => (
-                      <div key={item.product.id} className="flex justify-between items-start gap-4">
+                    {safeCart.map((item) => (
+                      <div key={item.product?.id || Math.random().toString()} className="flex justify-between items-start gap-4">
                         <div>
-                          <div className="font-bold uppercase text-sm">{item.product.name}</div>
+                          <div className="font-bold uppercase text-sm">{item.product?.name || "Premium Asset"}</div>
                           <div className="text-xs text-white/40">
-                            Qty: {item.quantity} • {item.product.category}
+                            Qty: {item.quantity} • {item.product?.category || "Hardware"}
                           </div>
                         </div>
                         <div className="font-mono text-sm">
-                          ${(item.product.price * item.quantity).toLocaleString("en-US", {
+                          ${((item.product?.price || 0) * item.quantity).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                           })}
                         </div>
@@ -203,7 +198,6 @@ export default function CheckoutModal({
                 </div>
               </div>
 
-              {/* Right Column: Stripe Payment Form */}
               <form
                 onSubmit={handleCheckout}
                 className="w-full md:w-1/2 p-8 md:p-12 bg-[#0d0d0d] flex flex-col justify-between"
@@ -226,7 +220,6 @@ export default function CheckoutModal({
                   )}
 
                   <div className="space-y-4">
-                    {/* Customer Email */}
                     <div>
                       <label className="block text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">
                         Contact Email
@@ -241,7 +234,6 @@ export default function CheckoutModal({
                       />
                     </div>
 
-                    {/* Cardholder Name */}
                     <div>
                       <label className="block text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">
                         Cardholder Name
@@ -256,7 +248,6 @@ export default function CheckoutModal({
                       />
                     </div>
 
-                    {/* Stripe Card fields visual mockup */}
                     <div className="p-4 bg-white/5 border border-white/10 rounded">
                       <div className="flex justify-between items-center mb-4">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-white/40">
@@ -269,7 +260,6 @@ export default function CheckoutModal({
                       </div>
 
                       <div className="space-y-3">
-                        {/* Card Number */}
                         <div>
                           <input
                             type="text"
@@ -281,7 +271,6 @@ export default function CheckoutModal({
                           />
                         </div>
 
-                        {/* Exp / CVC */}
                         <div className="flex gap-3">
                           <input
                             type="text"
@@ -331,7 +320,6 @@ export default function CheckoutModal({
               </form>
             </>
           ) : (
-            /* Success confirmation screen */
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}

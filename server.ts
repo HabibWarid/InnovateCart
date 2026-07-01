@@ -1,3 +1,64 @@
+// server.ts এর একদম উপরে গ্লোবালি ডিক্লেয়ার করো
+let localProducts: any[] = [
+  {
+    id: "studio-display",
+    name: "Studio Display",
+    tagline: "Ultra-precise 6K creative screen",
+    description: "High-performance hardware aesthetic for creative professionals. Complete color coverage with absolute clarity.",
+    price: 1450,
+    category: "Display",
+    imageUrl: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#1a1a1a] to-[#333333]",
+    specs: ["32-inch Oxide TFT", "6016 x 3384 Pixels", "1600 nits Peak Brightness", "Thunderbolt 4 Connection"]
+  },
+  {
+    id: "mono-keyboard",
+    name: "Mono Keyboard",
+    tagline: "Seamless mechanical input",
+    description: "Anodized aluminum case with dynamic hot-swappable tactile switches and high-contrast stealth legends.",
+    price: 320,
+    category: "Input",
+    imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#111111] to-[#252525]",
+    specs: ["75% Layout", "CNC Aluminum Base", "Custom Matte Switches", "USB-C Interface"]
+  },
+  {
+    id: "linear-console",
+    name: "Linear Console",
+    tagline: "Creative physical controller",
+    description: "Sleek physical rotary dials and smooth sliding knobs designed for precision timelines and creative visual controls.",
+    price: 480,
+    category: "Control",
+    imageUrl: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#080808] to-[#1e1e1e]",
+    specs: ["4 Motorized Faders", "6 Dynamic Knobs", "Aluminum Top Plate", "OLED Status Displays"]
+  },
+  {
+    id: "veloce-interface",
+    name: "Veloce Audio",
+    tagline: "Ultra-low-noise interface",
+    description: "Dual state-of-the-art microphone preamps coupled with high-resolution converters for reference-grade sound.",
+    price: 650,
+    category: "Audio",
+    imageUrl: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#1f1f1f] to-[#3a3a3a]",
+    specs: ["2 XLR-1/4\" Combos", "125dB Dynamic Range", "Dedicated Monitor Out", "Hardware Level Meters"]
+  },
+  {
+    id: "aura-beam",
+    name: "Aura Light Beam",
+    tagline: "Intelligent magnetic lamp bar",
+    description: "Aesthetic color-balancing light bar that snaps magnetically to monitors, protecting eyes and boosting focus.",
+    price: 180,
+    category: "Lighting",
+    imageUrl: "https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#222222] to-[#444444]",
+    specs: ["Magnetic Snap On", "Color-Balancing LEDs", "Ambient Backlight", "Touch Slide Control"]
+  }
+];
+
+let localOrders: any[] = [];
+
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -49,8 +110,9 @@ function getStripe() {
 
 // REST API Endpoints
 
-// Optional Auth Helper for client checkout (allows both guest and authenticated user checkouts)
+// Optional Auth Helper for client checkout
 async function getAuthUserFromHeader(req: express.Request) {
+  if (process.env.NEXT_DISABLE_DB === "true") return null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split('Bearer ')[1];
@@ -64,9 +126,12 @@ async function getAuthUserFromHeader(req: express.Request) {
   return null;
 }
 
-// Sync Route - can be called to manually trigger product sync
+// Sync Route
 app.post("/api/sync-products", async (req, res) => {
   try {
+    if (process.env.NEXT_DISABLE_DB === "true") {
+      return res.json({ success: true, count: localProducts.length, message: "Running in Database-Disabled Mode" });
+    }
     await syncProducts();
     const currentProducts = await db.select().from(productsTable);
     res.json({ success: true, count: currentProducts.length });
@@ -78,6 +143,9 @@ app.post("/api/sync-products", async (req, res) => {
 // Endpoint to sync/register users upon front-end sign-in
 app.post("/api/register-user", requireAuth, async (req: AuthRequest, res) => {
   try {
+    if (process.env.NEXT_DISABLE_DB === "true") {
+      return res.json({ success: true, user: { id: 1, uid: req.user?.uid, email: req.user?.email || "mock@innovatecart.com" } });
+    }
     if (!req.user) {
       return res.status(401).json({ error: "Missing authentication token profile" });
     }
@@ -89,24 +157,27 @@ app.post("/api/register-user", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// 1. Get products list
+// 1. Get products list (Updated for pure array response matching front-end)
 app.get("/api/products", async (req, res) => {
   try {
+    if (process.env.NEXT_DISABLE_DB === "true") {
+      return res.json(localProducts);
+    }
+    
     let currentProducts = await db.select().from(productsTable);
-    // If the database is completely empty on first run, sync products automatically
     if (currentProducts.length === 0) {
       console.log("No products found in PostgreSQL. Running sync products on demand...");
       await syncProducts();
       currentProducts = await db.select().from(productsTable);
     }
-    res.json({ products: currentProducts });
+    res.json(currentProducts);
   } catch (err: any) {
     console.error("Failed to query products from database:", err);
     res.status(500).json({ error: "Failed to retrieve products catalog" });
   }
 });
 
-// 2. Stripe Payment Intent Creator (Lazy & Safe)
+// 2. Stripe Payment Intent Creator
 app.post("/api/create-payment-intent", async (req, res) => {
   try {
     const { amount, currency = "usd", metadata = {} } = req.body;
@@ -117,7 +188,6 @@ app.post("/api/create-payment-intent", async (req, res) => {
 
     const stripe = getStripe();
     if (!stripe) {
-      // Elegant Sandbox Simulation payload
       return res.json({
         clientSecret: "simulated_stripe_secret_" + Math.random().toString(36).substring(2),
         isSimulated: true,
@@ -125,9 +195,7 @@ app.post("/api/create-payment-intent", async (req, res) => {
       });
     }
 
-    // Convert to cents for Stripe
     const centsAmount = Math.round(amount * 100);
-
     const paymentIntent = await stripe.paymentIntents.create({
       amount: centsAmount,
       currency,
@@ -147,7 +215,7 @@ app.post("/api/create-payment-intent", async (req, res) => {
   }
 });
 
-// 3. Place order (saves it to PostgreSQL)
+// 3. Place order
 app.post("/api/place-order", async (req, res) => {
   try {
     const { items, total, paymentMethod, paymentStatus = "completed" } = req.body;
@@ -155,7 +223,26 @@ app.post("/api/place-order", async (req, res) => {
       return res.status(400).json({ error: "Order items are empty." });
     }
 
-    // Check if user is authenticated optionally
+    const orderId = "ord_" + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const fullOrder = {
+      id: orderId,
+      items: items.map((it: any) => ({
+        id: it.productId || it.id,
+        name: it.name || "Product Item",
+        price: parseFloat(it.price),
+        quantity: parseInt(it.quantity) || 1
+      })),
+      total: parseFloat(total),
+      paymentMethod: paymentMethod || "Stripe Card",
+      paymentStatus,
+      createdAt: new Date().toISOString()
+    };
+
+    if (process.env.NEXT_DISABLE_DB === "true") {
+      localOrders.unshift(fullOrder);
+      return res.json({ success: true, order: fullOrder });
+    }
+
     const decodedUser = await getAuthUserFromHeader(req);
     let dbUserId: number | null = null;
     
@@ -164,9 +251,6 @@ app.post("/api/place-order", async (req, res) => {
       dbUserId = userRecord.id;
     }
 
-    const orderId = "ord_" + Math.random().toString(36).substring(2, 10).toUpperCase();
-
-    // Insert order in a transaction
     await db.transaction(async (tx) => {
       await tx.insert(ordersTable).values({
         id: orderId,
@@ -187,15 +271,6 @@ app.post("/api/place-order", async (req, res) => {
       }
     });
 
-    const fullOrder = {
-      id: orderId,
-      items,
-      total,
-      paymentMethod,
-      paymentStatus,
-      createdAt: new Date().toISOString()
-    };
-
     res.json({ success: true, order: fullOrder });
   } catch (err: any) {
     console.error("Order placement database error:", err);
@@ -206,17 +281,18 @@ app.post("/api/place-order", async (req, res) => {
 // 4. GET Orders history
 app.get("/api/orders", async (req, res) => {
   try {
+    if (process.env.NEXT_DISABLE_DB === "true") {
+      return res.json({ orders: localOrders.slice(0, 5) });
+    }
+
     const decodedUser = await getAuthUserFromHeader(req);
     
     if (decodedUser) {
-      // Find database user
       const dbUsers = await db.select().from(usersTable).where(eq(usersTable.uid, decodedUser.uid)).limit(1);
       if (dbUsers.length > 0) {
         const userId = dbUsers[0].id;
-        // Fetch user's orders
         const userOrders = await db.select().from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt));
         
-        // Enrich orders with their items
         const enrichedOrders = [];
         for (const order of userOrders) {
           const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
@@ -234,7 +310,6 @@ app.get("/api/orders", async (req, res) => {
       }
     }
 
-    // Guest / fallback: retrieve last 5 public/guest orders
     const publicOrders = await db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt)).limit(5);
     const enrichedOrders = [];
     for (const order of publicOrders) {
@@ -262,10 +337,9 @@ app.post("/api/recommendations", async (req, res) => {
     const { userPreferences, currentCartIds } = req.body;
     const ai = getGemini();
 
-    const dbProducts = await db.select().from(productsTable);
+    const dbProducts = process.env.NEXT_DISABLE_DB === "true" ? localProducts : await db.select().from(productsTable);
 
     if (!ai || dbProducts.length === 0) {
-      // Smart Fallback
       const fallbackList = dbProducts.length > 0 ? dbProducts : [];
       const recommendedProduct = currentCartIds?.includes("studio-display")
         ? fallbackList.find(p => p.id === "mono-keyboard")
@@ -328,7 +402,7 @@ app.post("/api/chatbot", async (req, res) => {
     }
 
     const ai = getGemini();
-    const dbProducts = await db.select().from(productsTable);
+    const dbProducts = process.env.NEXT_DISABLE_DB === "true" ? localProducts : await db.select().from(productsTable);
 
     const systemInstruction = `You are "INNOVATE_BOT", the autonomous AI Customer Support Concierge for InnovateCart (a hyper-premium, minimalist developer and creative hardware brand).
 You talk in a sophisticated, calm, professional, human-like, design-focused tone (no excessive emojis, no exclamation mark overload).
@@ -341,7 +415,6 @@ The current cart contains: ${JSON.stringify(currentCart || [])}.
 Keep your responses direct, helpful, and concise (max 3 sentences). Answer questions about products, specifications, secure payment integration, shipping, or assist them in choosing the right gears.`;
 
     if (!ai) {
-      // Smart Rule-Based Support Assistant fallback
       const lastMsg = messages[messages.length - 1].text.toLowerCase();
       let reply = "I would be happy to guide you with our design-grade hardware. Our systems are fully secured with Stripe. How can I help complete your setup?";
       
@@ -358,13 +431,11 @@ Keep your responses direct, helpful, and concise (max 3 sentences). Answer quest
       return res.json({ reply, isSimulated: true });
     }
 
-    // Format chat logs for Gemini API
     const formattedContents = messages.map((m: any) => ({
       role: m.sender === "user" ? "user" : "model",
       parts: [{ text: m.text }]
     }));
 
-    // Prepend instruction to context
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: formattedContents,
@@ -386,11 +457,14 @@ Keep your responses direct, helpful, and concise (max 3 sentences). Answer quest
 
 // Vite/Express Integration setup
 async function startServer() {
-  // Sync products at startup in background
-  try {
-    await syncProducts();
-  } catch (e) {
-    console.error("Startup products sync warning:", e);
+  if (process.env.NEXT_DISABLE_DB !== "true") {
+    try {
+      await syncProducts();
+    } catch (e) {
+      console.error("Startup products sync warning:", e);
+    }
+  } else {
+    console.log("Database Bypass Mode Active. Using fallback product catalog safely.");
   }
 
   if (process.env.NODE_ENV !== "production") {

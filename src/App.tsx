@@ -10,10 +10,71 @@ import { ShoppingBag, Cpu, ArrowRight, Sparkles, Check, Trash2, ShieldCheck, Log
 import { auth, googleAuthProvider } from "./lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 
+// এখানে লোকাল মক ডাটা অ্যাড করা হলো যাতে ডাটাবেজ ছাড়া প্রোডাক্ট দেখায়
+const defaultProducts: Product[] = [
+  {
+    id: "studio-display",
+    name: "Studio Display",
+    tagline: "Ultra-precise 6K creative screen",
+    description: "High-performance hardware aesthetic for creative professionals. Complete color coverage with absolute clarity.",
+    price: 1450,
+    category: "Display",
+    imageUrl: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#1a1a1a] to-[#333333]",
+    specs: ["32-inch Oxide TFT", "6016 x 3384 Pixels", "1600 nits Peak Brightness", "Thunderbolt 4 Connection"]
+  },
+  {
+    id: "mono-keyboard",
+    name: "Mono Keyboard",
+    tagline: "Seamless mechanical input",
+    description: "Anodized aluminum case with dynamic hot-swappable tactile switches and high-contrast stealth legends.",
+    price: 320,
+    category: "Input",
+    imageUrl: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#111111] to-[#252525]",
+    specs: ["75% Layout", "CNC Aluminum Base", "Custom Matte Switches", "USB-C Interface"]
+  },
+  {
+    id: "linear-console",
+    name: "Linear Console",
+    tagline: "Creative physical controller",
+    description: "Sleek physical rotary dials and smooth sliding knobs designed for precision timelines and creative visual controls.",
+    price: 480,
+    category: "Control",
+    imageUrl: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#080808] to-[#1e1e1e]",
+    specs: ["4 Motorized Faders", "6 Dynamic Knobs", "Aluminum Top Plate", "OLED Status Displays"]
+  },
+  {
+    id: "veloce-interface",
+    name: "Veloce Audio",
+    tagline: "Ultra-low-noise interface",
+    description: "Dual state-of-the-art microphone preamps coupled with high-resolution converters for reference-grade sound.",
+    price: 650,
+    category: "Audio",
+    imageUrl: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#1f1f1f] to-[#3a3a3a]",
+    specs: ["2 XLR-1/4\" Combos", "125dB Dynamic Range", "Dedicated Monitor Out", "Hardware Level Meters"]
+  },
+  {
+    id: "aura-beam",
+    name: "Aura Light Beam",
+    tagline: "Intelligent magnetic lamp bar",
+    description: "Aesthetic color-balancing light bar that snaps magnetically to monitors, protecting eyes and boosting focus.",
+    price: 180,
+    category: "Lighting",
+    imageUrl: "https://images.unsplash.com/photo-1507646227500-4d389b0012be?w=800&auto=format&fit=crop&q=80",
+    imageBg: "from-[#222222] to-[#444444]",
+    specs: ["Magnetic Snap On", "Color-Balancing LEDs", "Ambient Backlight", "Touch Slide Control"]
+  }
+];
+
 export default function App() {
   const [activeView, setActiveView] = useState<"home" | "about" | "contact">("home");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  // প্রথম মক প্রোডাক্টটি ডিফল্ট সিলেক্টেড থাকবে
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(defaultProducts[0]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -255,7 +316,7 @@ export default function App() {
             transition={{ duration: 0.2 }}
             className="flex-1 flex flex-col min-h-0"
           >
-            {/* AI Setup Configurator Bar (Positioned below the search bar / navigation) */}
+            {/* AI Setup Configurator Bar */}
             <div className="border-b border-white/10 bg-[#0c0c0c] px-4 sm:px-6 md:px-12 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4 select-none shrink-0">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#635bff] shrink-0">
@@ -301,15 +362,11 @@ export default function App() {
                           <div className="flex gap-4">
                             <button
                               onClick={() => {
-                                fetch("/api/products")
-                                  .then((res) => res.json())
-                                  .then((data) => {
-                                    const p = data.products.find((p: Product) => p.id === recommendation.productId);
-                                    if (p) {
-                                      setSelectedProduct(p);
-                                      window.scrollTo({ top: 0, behavior: "smooth" });
-                                    }
-                                  });
+                                const p = defaultProducts.find((p: Product) => p.id === recommendation.productId);
+                                if (p) {
+                                  setSelectedProduct(p);
+                                  window.scrollTo({ top: 0, behavior: "smooth" });
+                                }
                               }}
                               className="text-[9px] text-[#635bff] uppercase font-bold tracking-widest hover:underline"
                             >
@@ -442,7 +499,7 @@ export default function App() {
                   searchTerm={searchTerm}
                 />
 
-                {/* Stripe Badge Banner inside Right Rail */}
+                {/* Stripe Badge Banner */}
                 <div className="p-6 border-t border-white/10 bg-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-[#635bff]/10 border border-[#635bff]/30 text-[#635bff]">
@@ -467,16 +524,11 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Cart Slider Drawer */}
+      {/* Cart Drawer */}
       <AnimatePresence>
         {isCartOpen && (
           <div className="fixed inset-0 z-50 overflow-hidden select-none">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-              onClick={() => setIsCartOpen(false)}
-            />
-
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
             <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
               <motion.div
                 initial={{ x: "100%" }}
@@ -485,18 +537,11 @@ export default function App() {
                 transition={{ type: "tween", duration: 0.3 }}
                 className="w-screen max-w-md bg-[#0a0a0a] border-l border-white/10 text-white flex flex-col h-full"
               >
-                {/* Drawer Header */}
                 <div className="h-20 border-b border-white/10 px-6 flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-widest">SHOPPING BAG ({totalCartItems})</span>
-                  <button
-                    onClick={() => setIsCartOpen(false)}
-                    className="text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-white px-3 py-1.5 transition-all cursor-pointer"
-                  >
-                    CLOSE
-                  </button>
+                  <button onClick={() => setIsCartOpen(false)} className="text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-white px-3 py-1.5 transition-all cursor-pointer">CLOSE</button>
                 </div>
 
-                {/* Drawer Body Items */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   {cart.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center text-white/30">
@@ -509,12 +554,7 @@ export default function App() {
                       <div key={item.product.id} className="flex gap-4 border-b border-white/5 pb-6">
                         <div className={`w-20 h-20 bg-gradient-to-br ${item.product.imageBg} border border-white/10 flex items-center justify-center shrink-0 relative overflow-hidden`}>
                           {item.product.imageUrl ? (
-                            <img 
-                              src={item.product.imageUrl} 
-                              alt={item.product.name}
-                              referrerPolicy="no-referrer"
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={item.product.imageUrl} alt={item.product.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                           ) : (
                             <Cpu className="h-5 w-5 text-white/20" />
                           )}
@@ -523,36 +563,17 @@ export default function App() {
                           <div>
                             <div className="flex justify-between items-start">
                               <h4 className="text-xs font-bold uppercase tracking-wider">{item.product.name}</h4>
-                              <span className="font-mono text-xs">
-                                ${(item.product.price * item.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                              </span>
+                              <span className="font-mono text-xs">${(item.product.price * item.quantity).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                             </div>
                             <span className="text-[9px] font-mono text-white/40 block mt-0.5">{item.product.category}</span>
                           </div>
-
                           <div className="flex justify-between items-center mt-2">
                             <div className="flex items-center border border-white/10">
-                              <button
-                                onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
-                                className="px-2 py-0.5 text-xs text-white/60 hover:text-white"
-                              >
-                                -
-                              </button>
+                              <button onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)} className="px-2 py-0.5 text-xs text-white/60 hover:text-white">-</button>
                               <span className="px-3 py-0.5 text-xs font-mono font-bold bg-white/5">{item.quantity}</span>
-                              <button
-                                onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
-                                className="px-2 py-0.5 text-xs text-white/60 hover:text-white"
-                              >
-                                +
-                              </button>
+                              <button onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)} className="px-2 py-0.5 text-xs text-white/60 hover:text-white">+</button>
                             </div>
-
-                            <button
-                              onClick={() => handleRemoveFromCart(item.product.id)}
-                              className="text-white/30 hover:text-red-400 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <button onClick={() => handleRemoveFromCart(item.product.id)} className="text-white/30 hover:text-red-400 transition-colors"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
                       </div>
@@ -560,28 +581,13 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Drawer Footer Summary */}
                 {cart.length > 0 && (
                   <div className="p-6 bg-white/5 border-t border-white/10 space-y-4">
                     <div className="flex justify-between items-baseline">
                       <span className="text-xs font-bold uppercase tracking-widest text-white/40">Subtotal</span>
-                      <span className="text-xl font-black font-mono">
-                        ${cartSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                      </span>
+                      <span className="text-xl font-black font-mono">${cartSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                     </div>
-                    <p className="text-[9px] text-white/30 uppercase font-mono">
-                      Worldwide complimentary shipping applied on orders over $500.
-                    </p>
-
-                    <button
-                      onClick={() => {
-                        setIsCartOpen(false);
-                        setIsCheckoutOpen(true);
-                      }}
-                      className="w-full bg-[#635bff] hover:bg-[#5851d8] text-white py-4 font-black uppercase tracking-widest text-xs transition-all duration-300 text-center cursor-pointer"
-                    >
-                      SECURE STRIPE CHECKOUT
-                    </button>
+                    <button onClick={() => { setIsCartOpen(false); setIsCheckoutOpen(true); }} className="w-full bg-[#635bff] hover:bg-[#5851d8] text-white py-4 font-black uppercase tracking-widest text-xs transition-all duration-300 text-center cursor-pointer">SECURE STRIPE CHECKOUT</button>
                   </div>
                 )}
               </motion.div>
@@ -590,16 +596,11 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Orders History Slider Drawer */}
+      {/* Orders History Drawer */}
       <AnimatePresence>
         {isHistoryOpen && (
           <div className="fixed inset-0 z-50 overflow-hidden select-none">
-            {/* Backdrop */}
-            <div
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-              onClick={() => setIsHistoryOpen(false)}
-            />
-
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsHistoryOpen(false)} />
             <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
               <motion.div
                 initial={{ x: "100%" }}
@@ -608,33 +609,22 @@ export default function App() {
                 transition={{ type: "tween", duration: 0.3 }}
                 className="w-screen max-w-md bg-[#0a0a0a] border-l border-white/10 text-white flex flex-col h-full"
               >
-                {/* Drawer Header */}
                 <div className="h-20 border-b border-white/10 px-6 flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-widest">ORDER HISTORY ({ordersHistory.length})</span>
-                  <button
-                    onClick={() => setIsHistoryOpen(false)}
-                    className="text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-white px-3 py-1.5 transition-all cursor-pointer"
-                  >
-                    CLOSE
-                  </button>
+                  <button onClick={() => setIsHistoryOpen(false)} className="text-xs font-bold uppercase tracking-wider border border-white/10 hover:border-white px-3 py-1.5 transition-all cursor-pointer">CLOSE</button>
                 </div>
-
-                {/* Drawer Body Items */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                   {ordersHistory.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center text-white/30">
                       <ShoppingBag className="h-8 w-8 mb-3" />
                       <p className="text-xs uppercase font-bold tracking-widest">No order history</p>
-                      <p className="text-[10px] font-mono mt-1">Once you complete checkout, your persistent PostgreSQL logs appear here.</p>
                     </div>
                   ) : (
                     ordersHistory.map((order) => (
                       <div key={order.id} className="border border-white/10 p-4 space-y-4 rounded bg-white/5 font-mono">
                         <div className="flex justify-between items-center text-xs">
                           <span className="text-white/40 font-bold">{order.id}</span>
-                          <span className="text-[9px] uppercase tracking-wider bg-green-500/10 border border-green-500/30 text-green-400 px-2 py-0.5 rounded">
-                            {order.paymentStatus}
-                          </span>
+                          <span className="text-[9px] uppercase tracking-wider bg-green-500/10 border border-green-500/30 text-green-400 px-2 py-0.5 rounded">{order.paymentStatus}</span>
                         </div>
                         <div className="space-y-1.5 text-xs text-white/80">
                           {order.items?.map((it: any, index: number) => (
@@ -648,9 +638,6 @@ export default function App() {
                           <span className="text-[10px] uppercase text-white/40">Total Charged</span>
                           <span className="font-bold text-[#635bff]">${order.total.toFixed(2)}</span>
                         </div>
-                        <div className="text-[9px] text-white/30 text-right">
-                          {new Date(order.createdAt).toLocaleString()}
-                        </div>
                       </div>
                     ))
                   )}
@@ -661,44 +648,8 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Stripe Payment Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => {
-          setIsCheckoutOpen(false);
-          if (user) fetchOrdersHistory(idToken);
-        }}
-        cart={cart}
-        onClearCart={() => {
-          setCart([]);
-          if (user) {
-            setTimeout(() => {
-              fetchOrdersHistory(idToken);
-            }, 500);
-          }
-        }}
-      />
-
-      {/* Autonomous AI Chatbot */}
-      <Chatbot cart={cart} />
-
-      {/* Bottom Running Micro-Ticker Marquee */}
-      <div className="h-12 bg-white flex items-center overflow-hidden shrink-0 select-none border-t border-white/5">
-        <div className="flex shrink-0 items-center whitespace-nowrap text-black font-black uppercase text-[10px] tracking-[0.3em] animate-marquee">
-          <span className="mx-8">Stripe Secure Checkout</span>
-          <span className="mx-8">Worldwide Express Delivery</span>
-          <span className="mx-8">Stripe Verified Merchant</span>
-          <span className="mx-8">2-Year Hardware Warranty</span>
-          <span className="mx-8">Secure Checkout</span>
-          <span className="mx-8">Worldwide Express Delivery</span>
-          <span className="mx-8">Stripe Verified Merchant</span>
-          <span className="mx-8">2-Year Hardware Warranty</span>
-          <span className="mx-8">Stripe Secure Checkout</span>
-          <span className="mx-8">Worldwide Express Delivery</span>
-          <span className="mx-8">Stripe Verified Merchant</span>
-          <span className="mx-8">2-Year Hardware Warranty</span>
-        </div>
-      </div>
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartItems={cart} subtotal={cartSubtotal} idToken={idToken} onCheckoutSuccess={() => setCart([])} />
+      <Chatbot />
     </div>
   );
 }
