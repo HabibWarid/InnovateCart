@@ -1,0 +1,6 @@
+{
+  "name": "InnovateCart",
+  "description": "An AI-powered e-commerce store featuring dynamic product recommendations, an autonomous NLP customer support chatbot, and secure Stripe payment integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
